@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Islamic Goals</title>
+  <!-- Tailwind CDN for quick styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <!-- Chart.js for charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- SheetJS (xlsx) for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF AutoTable for better PDF tables -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div class="min-h-screen max-w-6xl mx-auto p-4">
+    <header class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-2xl font-bold">My Islamic Routine Report</h1>
+        <div class="text-sm text-gray-500 dark:text-gray-400">Track • Improve • Stay Reminded</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="px-3 py-2 rounded-xl border">Toggle Theme</button>
+        <button id="exportPdf" class="px-3 py-2 rounded-xl border">Export PDF</button>
+        <div class="relative group">
+          <button id="exportXlsx" class="px-3 py-2 rounded-xl border">Export Data</button>
+          <div class="absolute hidden group-hover:block right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10">
+            <button id="exportExcel" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Export as Excel</button>
+            <button id="exportSheets" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Export for Google Sheets</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- Left: Today controls and categories -->
+      <section class="lg:col-span-2 space-y-4">
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">Today</div>
+            <div class="flex items-center gap-2">
+              <input type="date" id="selectedDate" class="px-3 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600" />
+              <button id="todayBtn" class="px-3 py-2 rounded-xl border">Today</button>
+            </div>
+          </div>
+
+          <div id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </div>
+
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">Entries</div>
+            <div class="flex items-center gap-2">
+              <select id="viewType" class="px-3 py-2 rounded-xl border dark:bg-gray-700 dark:border-gray-600">
+                <option value="list">List View</option>
+                <option value="table" selected>Table View</option>
+              </select>
+            </div>
+          </div>
+          <div id="entriesContainer"></div>
+        </div>
+      </section>
+
+      <!-- Right: Reports & Manage -->
+      <aside class="space-y-4">
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow">
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-semibold">Overview</div>
+            <select id="periodSelect" class="px-2 py-1 rounded border text-sm dark:bg-gray-700 dark:border-gray-600">
+              <option value="7d">1 Week</option>
+              <option value="1m">1 Month</option>
+              <option value="3m">3 Months</option>
+              <option value="1y">1 Year</option>
+            </select>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Average completion across categories for the selected period.</div>
+          <div>
+            <canvas id="lineChart" height="160"></canvas>
+          </div>
+          <div class="mt-4">
+            <div class="text-xs text-gray-500 dark:text-gray-400">Today Completion</div>
+            <div class="flex items-center gap-2 mt-1">
+              <div id="todayPct" class="text-lg font-semibold">0%</div>
+            </div>
+            <div class="mt-3"><canvas id="barChart" height="120"></canvas></div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow">
+          <div class="font-semibold mb-2">Manage Categories</div>
+          <div id="categoriesList" class="space-y-2 mb-3"></div>
+          <div class="p-2 border border-dashed rounded">
+            <div class="text-xs mb-2 text-gray-500 dark:text-gray-400">Add custom category</div>
+            <div class="grid grid-cols-2 gap-2">
+              <input id="newCatName" placeholder="Name (e.g., Hifz)" class="px-3 py-2 rounded dark:bg-gray-700" />
+              <select id="newCatUnit" class="px-3 py-2 rounded dark:bg-gray-700">
+                <option value="minutes">minutes</option>
+                <option value="hours">hours</option>
+                <option value="pages">pages</option>
+                <option value="count">count</option>
+                <option value="sessions">sessions</option>
+              </select>
+              <input id="newCatGoal" type="number" placeholder="Daily goal" class="px-3 py-2 rounded dark:bg-gray-700" />
+              <button id="addCatBtn" class="px-3 py-2 rounded bg-gray-900 text-white">Add Category</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow">
+          <div class="font-semibold mb-2">Tips</div>
+          <ul class="text-sm list-disc pl-5 text-gray-600 dark:text-gray-400">
+            <li>Press Enter in input boxes to add entries.</li>
+            <li>Use the bell area to add reminders in <code>HH:MM</code> format.</li>
+            <li>Export PDF/Excel/Sheets from the header buttons.</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="text-xs text-gray-500 dark:text-gray-400 mt-6">Data is stored locally in your browser (localStorage).</footer>
+  </div>
+
+<script>
+// --------------------------- Data & Defaults ---------------------------
+const DEFAULT_CATEGORIES = [
+  { id: 'prayer', name: 'Prayer', unit: 'count', goal: 5 },
+  { id: 'quran', name: 'Quran', unit: 'pages', goal: 10 },
+  { id: 'hadith', name: 'Hadith', unit: 'sessions', goal: 10 },
+  { id: 'islamic_books', name: 'Islamic Books', unit: 'pages', goal: 10 },
+  { id: 'textbooks', name: 'Textbooks / Academic', unit: 'hours', goal: 1},
+  { id: 'exercise', name: 'Physical Exercise', unit: 'minutes', goal: 30 },
+];
+
+const STORAGE_KEYS = { categories: 'mirr.categories.v1', entries: 'mirr.entries.v1', reminders: 'mirr.reminders.v1', theme: 'mirr.theme.v1' };
+
+function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+function todayKey(d=new Date()){ return d.toISOString().slice(0,10); }
+
+// --------------------------- Local Storage Helpers ---------------------------
+function lsGet(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch{ return fallback; } }
+function lsSet(key, value){ try{ localStorage.setItem(key, JSON.stringify(value)); }catch{} }
+
+let categories = lsGet(STORAGE_KEYS.categories, DEFAULT_CATEGORIES.slice());
+let entries = lsGet(STORAGE_KEYS.entries, []);
+let reminders = lsGet(STORAGE_KEYS.reminders, {});
+let theme = lsGet(STORAGE_KEYS.theme, 'light');
+
+// --------------------------- DOM Elements ---------------------------
+const selectedDateInput = document.getElementById('selectedDate');
+const todayBtn = document.getElementById('todayBtn');
+const categoriesGrid = document.getElementById('categoriesGrid');
+const entriesContainer = document.getElementById('entriesContainer');
+const categoriesList = document.getElementById('categoriesList');
+const addCatBtn = document.getElementById('addCatBtn');
+const newCatName = document.getElementById('newCatName');
+const newCatUnit = document.getElementById('newCatUnit');
+const newCatGoal = document.getElementById('newCatGoal');
+const periodSelect = document.getElementById('periodSelect');
+const todayPct = document.getElementById('todayPct');
+const themeToggle = document.getElementById('themeToggle');
+const exportPdfBtn = document.getElementById('exportPdf');
+const exportExcelBtn = document.getElementById('exportExcel');
+const exportSheetsBtn = document.getElementById('exportSheets');
+const viewTypeSelect = document.getElementById('viewType');
+
+selectedDateInput.value = todayKey();
+
+// --------------------------- Rendering ---------------------------
+function renderCategories(){
+  categoriesGrid.innerHTML = '';
+  categories.forEach(cat => {
+    const div = document.createElement('div');
+    div.className = 'p-3 rounded-xl border dark:border-gray-700 dark:bg-gray-700';
+    const todaySum = entries.filter(e=>e.date===selectedDateInput.value && e.categoryId===cat.id).reduce((s,e)=>s+e.value,0);
+    const pct = Math.max(0, Math.min(1, todaySum/(cat.goal||1)));
+    div.innerHTML = `
+      <div class="flex items-center justify-between">
+        <div class="font-medium">${cat.name}</div>
+        <button class="text-xs px-2 py-1 rounded border reset-btn" data-id="${cat.id}">Reset</button>
+      </div>
+      <div class="mt-2">
+        <div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-600 overflow-hidden"><div style="width:${(pct*100).toFixed(0)}%" class="h-2 bg-gray-900 dark:bg-green-400"></div></div>
+        <div class="text-xs mt-1 text-gray-500 dark:text-gray-300">${todaySum} / ${cat.goal} ${cat.unit}</div>
+      </div>
+      <div class="mt-3 flex items-center gap-2">
+        <input type="number" placeholder="Add ${cat.unit}" class="flex-1 px-3 py-2 rounded-xl border dark:bg-gray-600 add-entry-input" data-cat="${cat.id}" />
+        <button class="px-3 py-2 rounded-xl add-entry-btn bg-gray-900 text-white" data-cat="${cat.id}">Add</button>
+      </div>
+      <div class="mt-3 text-xs">
+        <div class="mb-1 flex items-center gap-1"><span>Reminders</span> <span>🔔</span></div>
+        <div class="flex items-center gap-2 reminders-wrap" data-cat="${cat.id}"></div>
+      </div>
+    `;
+    categoriesGrid.appendChild(div);
+  });
+  document.querySelectorAll('.add-entry-btn').forEach(b=> b.addEventListener('click', (e)=>{ const cat = e.currentTarget.dataset.cat; const input = e.currentTarget.parentElement.querySelector('.add-entry-input'); addEntry(cat, Number(input.value) || 0); input.value=''; }));
+  document.querySelectorAll('.add-entry-input').forEach(inp=> inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ const cat=inp.dataset.cat; addEntry(cat, Number(inp.value)||0); inp.value=''; }}));
+  document.querySelectorAll('.reset-btn').forEach(b=> b.addEventListener('click', (e)=>{ resetTodayFor(e.currentTarget.dataset.id); }));
+  renderReminders();
+}
+
+function renderReminders(){
+  document.querySelectorAll('.reminders-wrap').forEach(w=>{
+    const cat = w.dataset.cat;
+    w.innerHTML='';
+    (reminders[cat]||[]).sort((a,b)=>a.time.localeCompare(b.time)).forEach(r=>{
+      const span = document.createElement('span'); span.className='inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-500 text-xs'; span.textContent = r.time;
+      const btn = document.createElement('button'); btn.className='ml-1 text-red-500'; btn.textContent='x'; btn.addEventListener('click', ()=>{ removeReminder(cat, r.id); });
+      span.appendChild(btn);
+      w.appendChild(span);
+    });
+    const input = document.createElement('input'); input.placeholder='HH:MM'; input.className='w-24 px-2 py-1 rounded text-xs border dark:bg-gray-600';
+    const add = document.createElement('button'); add.className='px-2 py-1 rounded border text-xs'; add.textContent='Add'; add.addEventListener('click', ()=>{ if(/^\d{2}:\d{2}$/.test(input.value)){ addReminder(cat, input.value); input.value=''; } else alert('Use HH:MM'); });
+    w.appendChild(input); w.appendChild(add);
+  });
+}
+
+function renderEntries(limit=3){
+  entriesContainer.innerHTML='';
+  
+  if (viewTypeSelect.value === 'table') {
+    renderEntriesTable();
+    return;
+  }
+  
+  // Original list view
+  if(entries.length===0){ entriesContainer.innerHTML='<div class="text-sm text-gray-500">No entries yet. Add some from the cards above.</div>'; return; }
+  const table = document.createElement('table'); table.className='w-full text-sm';
+  table.innerHTML = `<thead class="text-left text-gray-500"><tr><th class="py-2 pr-4">Date</th><th class="py-2 pr-4">Category</th><th class="py-2 pr-4">Value</th><th class="py-2 pr-4">Unit</th><th class="py-2">Action</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+  const show = entries.slice(-limit).reverse();
+  show.forEach(e=>{
+    const cat = categories.find(c=>c.id===e.categoryId) || {name:e.categoryId,unit:''};
+    const tr = document.createElement('tr'); tr.className='border-t';
+    tr.innerHTML = `<td class="py-2 pr-4">${e.date}</td><td class="py-2 pr-4">${cat.name}</td><td class="py-2 pr-4">${e.value}</td><td class="py-2 pr-4">${cat.unit||''}</td><td class="py-2"><button class="delete-entry-btn px-2 py-1 rounded border text-xs" data-id="${e.id}">Delete</button></td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); entriesContainer.appendChild(table);
+  document.querySelectorAll('.delete-entry-btn').forEach(b=> b.addEventListener('click', (e)=>{ deleteEntry(e.currentTarget.dataset.id); }));
+
+  if(entries.length>limit){
+    const btn=document.createElement('button');
+    btn.textContent='Show More';
+    btn.className='mt-2 text-xs text-blue-600 underline';
+    btn.onclick=()=>renderEntries(entries.length);
+    entriesContainer.appendChild(btn);
+  }
+}
+
+function renderEntriesTable() {
+  if(entries.length===0){ 
+    entriesContainer.innerHTML='<div class="text-sm text-gray-500">No entries yet. Add some from the cards above.</div>'; 
+    return; 
+  }
+  
+  // Get unique dates and sort them in descending order
+  const dates = [...new Set(entries.map(e => e.date))].sort().reverse();
+  
+  // Create table
+  const table = document.createElement('table');
+  table.className = 'w-full text-sm border-collapse';
+  
+  // Create header row with categories
+  let headerHTML = '<thead><tr><th class="p-2 border dark:border-gray-700 bg-gray-100 dark:bg-gray-700 text-left">Date</th>';
+  categories.forEach(cat => {
+    headerHTML += `<th class="p-2 border dark:border-gray-700 bg-gray-100 dark:bg-gray-700 text-left">${cat.name} (${cat.unit})</th>`;
+  });
+  headerHTML += '</tr></thead>';
+  
+  // Create table body
+  let bodyHTML = '<tbody>';
+  dates.forEach(date => {
+    bodyHTML += `<tr><td class="p-2 border dark:border-gray-700 font-medium">${date}</td>`;
+    
+    categories.forEach(cat => {
+      const dayEntries = entries.filter(e => e.date === date && e.categoryId === cat.id);
+      const total = dayEntries.reduce((sum, e) => sum + e.value, 0);
+      
+      bodyHTML += `<td class="p-2 border dark:border-gray-700 text-center">${total || '-'}</td>`;
+    });
+    
+    bodyHTML += '</tr>';
+  });
+  bodyHTML += '</tbody>';
+  
+  table.innerHTML = headerHTML + bodyHTML;
+  entriesContainer.appendChild(table);
+}
+
+function renderCategoriesList(){
+  categoriesList.innerHTML='';
+  categories.forEach(c=>{
+    const div = document.createElement('div'); div.className='flex items-center justify-between gap-2 p-2 rounded bg-gray-100 dark:bg-gray-600';
+    div.innerHTML = `<div><div class='text-sm font-medium'>${c.name}</div><div class='text-xs text-gray-500 dark:text-gray-300'>• goal ${c.goal} ${c.unit}</div></div><button class='remove-cat-btn px-2 py-1 rounded border text-xs' data-id='${c.id}'>Remove</button>`;
+    categoriesList.appendChild(div);
+  });
+  document.querySelectorAll('.remove-cat-btn').forEach(b=> b.addEventListener('click', (e)=>{ removeCategory(e.currentTarget.dataset.id); }));
+}
+
+// --------------------------- Actions ---------------------------
+function addEntry(catId, value){ if(!catId) return; const v = Number(value)||0; if(isNaN(v)) return; const obj = { id: uid('e'), date: selectedDateInput.value, categoryId: catId, value: v }; entries.push(obj); lsSet(STORAGE_KEYS.entries, entries); updateAll(); }
+function deleteEntry(id){ entries = entries.filter(e=>e.id!==id); lsSet(STORAGE_KEYS.entries, entries); updateAll(); }
+function addCategory(){ const name = newCatName.value.trim(); if(!name) return alert('Enter name'); const id = name.toLowerCase().replace(/[^a-z0-9]+/g,'_') + '_' + Math.random().toString(36).slice(2,5); const cat = { id, name, unit: newCatUnit.value, goal: Number(newCatGoal.value)||30 }; categories.push(cat); lsSet(STORAGE_KEYS.categories, categories); newCatName.value=''; newCatGoal.value=''; updateAll(); }
+function removeCategory(id){ if(!confirm('Delete category and its reminders? (Entries remain)')) return; categories = categories.filter(c=>c.id!==id); delete reminders[id]; lsSet(STORAGE_KEYS.categories, categories); lsSet(STORAGE_KEYS.reminders, reminders); updateAll(); }
+function resetTodayFor(catId){ entries = entries.filter(e => !(e.categoryId===catId && e.date===selectedDateInput.value)); lsSet(STORAGE_KEYS.entries, entries); updateAll(); }
+function addReminder(catId, timeStr){ if(!/^\d{2}:\d{2}$/.test(timeStr)) return; reminders[catId] = [ ...(reminders[catId]||[]), { id: uid('r'), time: timeStr } ]; lsSet(STORAGE_KEYS.reminders, reminders); scheduleReminders(); updateAll(); }
+function removeReminder(catId, rid){ reminders[catId] = (reminders[catId]||[]).filter(r=>r.id!==rid); lsSet(STORAGE_KEYS.reminders, reminders); updateAll(); }
+
+// --------------------------- Reminders Notification ---------------------------
+function scheduleReminders(){ if(!('Notification' in window)) return; if(Notification.permission!=='granted') Notification.requestPermission(); Object.entries(reminders).forEach(([catId, arr])=>{ arr.forEach(r=>{ const [hh,mm] = r.time.split(':').map(Number); const now = new Date(); const t = new Date(); t.setHours(hh,mm,0,0); if(t<now) t.setDate(t.getDate()+1); const diff = t-now; setTimeout(()=>{ new Notification('Reminder',{ body:`Time for ${categories.find(c=>c.id===catId)?.name || catId}` }); }, diff); }); }); }
+
+// --------------------------- Charts ---------------------------
+let lineChart, barChart;
+function updateCharts(){
+  const period = periodSelect.value;
+  const now = new Date(); let start = new Date(); 
+  if(period==='7d'){ start.setDate(now.getDate()-7); }
+  else if(period==='1m'){ start.setMonth(now.getMonth()-1); }
+  else if(period==='3m'){ start.setMonth(now.getMonth()-3); }
+  else if(period==='1y'){ start.setFullYear(now.getFullYear()-1); }
+
+  const allDates=[]; for(let d=new Date(start); d<=now; d.setDate(d.getDate()+1)){ allDates.push(todayKey(d)); }
+  const perDate=allDates.map(date=>{
+    const perCat=categories.map(cat=>{ const sum=entries.filter(e=>e.date===date && e.categoryId===cat.id).reduce((s,e)=>s+e.value,0); return Math.min(1, sum/(cat.goal||1)); });
+    return { date, avg: perCat.length? (perCat.reduce((a,b)=>a+b,0)/perCat.length):0 };
+  });
+  const lineData={ labels:perDate.map(d=>d.date), datasets:[{ label:'Average Completion', data:perDate.map(d=>(d.avg*100).toFixed(0)), borderColor:'#16a34a', tension:0.3, fill:false }]};
+  if(lineChart) lineChart.destroy();
+  lineChart=new Chart(document.getElementById('lineChart'),{ type:'line', data:lineData, options:{ scales:{ y:{ beginAtZero:true, max:100, ticks:{ callback:v=>v+'%' }}}}});
+
+  const today=selectedDateInput.value;
+  const data=categories.map(cat=>{ const sum=entries.filter(e=>e.date===today && e.categoryId===cat.id).reduce((s,e)=>s+e.value,0); return Math.min(100, sum/(cat.goal||1)*100); });
+  if(barChart) barChart.destroy();
+  barChart=new Chart(document.getElementById('barChart'),{ type:'bar', data:{ labels:categories.map(c=>c.name), datasets:[{ data, backgroundColor:'#3b82f6' }]}, options:{ scales:{ y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}}});
+
+  const todayAvg=data.length? data.reduce((a,b)=>a+b,0)/data.length:0;
+  todayPct.textContent = todayAvg.toFixed(0)+'%';
+}
+
+// --------------------------- Theme ---------------------------
+function applyTheme(){ document.documentElement.classList.remove('light','dark'); document.documentElement.classList.add(theme); }
+themeToggle.addEventListener('click', ()=>{ theme = theme==='light'?'dark':'light'; lsSet(STORAGE_KEYS.theme, theme); applyTheme(); });
+
+// --------------------------- Export (Enhanced Format) ---------------------------
+function getEntriesForExport() {
+  const dates = [...new Set(entries.map(e => e.date))].sort().reverse();
+  const exportData = [];
+  
+  // Header row
+  const headerRow = ['Date'];
+  categories.forEach(cat => {
+    headerRow.push(`${cat.name} (${cat.unit})`);
+  });
+  exportData.push(headerRow);
+  
+  // Data rows
+  dates.forEach(date => {
+    const row = [date];
+    categories.forEach(cat => {
+      const dayEntries = entries.filter(e => e.date === date && e.categoryId === cat.id);
+      const total = dayEntries.reduce((sum, e) => sum + e.value, 0);
+      row.push(total || 0);
+    });
+    exportData.push(row);
+  });
+  
+  return exportData;
+}
+
+// Google Sheets export function with PDF-like design
+exportSheetsBtn.addEventListener('click', () => {
+  const selected = new Date(selectedDateInput.value);
+  const monthName = selected.toLocaleString('default', { month: 'long' });
+  const year = selected.getFullYear();
+  
+  // Create a more structured CSV with PDF-like formatting
+  let csvContent = "data:text/csv;charset=utf-8,";
+  
+  // Add title and header information
+  csvContent += "Islamic Routine Report\r\n";
+  csvContent += `${monthName} ${year}\r\n`;
+  csvContent += "\r\n"; // Empty line
+  
+  // Get the data
+  const exportData = getEntriesForExport();
+  
+  // Add column headers
+  csvContent += exportData[0].join(",") + "\r\n";
+  
+  // Add data rows
+  for (let i = 1; i < exportData.length; i++) {
+    csvContent += exportData[i].join(",") + "\r\n";
+  }
+  
+  // Add summary section
+  csvContent += "\r\n"; // Empty line
+  csvContent += "Summary\r\n";
+  
+  // Calculate totals for each category
+  categories.forEach(cat => {
+    const total = entries
+      .filter(e => e.categoryId === cat.id)
+      .reduce((sum, e) => sum + e.value, 0);
+    csvContent += `Total ${cat.name},${total} ${cat.unit}\r\n`;
+  });
+  
+  // Add footer
+  csvContent += "\r\n"; // Empty line
+  csvContent += `Report generated on,${new Date().toLocaleDateString()}\r\n`;
+  
+  // Create download link
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `islamic_routine_report_${monthName}_${year}.csv`);
+  document.body.appendChild(link);
+  
+  // Trigger download
+  link.click();
+  document.body.removeChild(link);
+  
+  // Show instructions
+  alert('CSV file downloaded with PDF-like formatting. You can import this into Google Sheets:\n\n1. Open Google Sheets\n2. Click File > Import\n3. Upload the CSV file\n4. Select "Replace spreadsheet" and click Import');
+});
+
+// Excel export function
+exportExcelBtn.addEventListener('click', () => {
+  const selected = new Date(selectedDateInput.value);
+  const monthName = selected.toLocaleString('default', { month: 'long' });
+  const year = selected.getFullYear();
+  
+  const exportData = getEntriesForExport();
+  
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  
+  // Add title row
+  const titleRow = [['Islamic Routine Report']];
+  const subtitleRow = [[`${monthName} ${year}`]];
+  const emptyRow = [['']];
+  
+  // Combine title and data
+  const fullData = [
+    ...titleRow,
+    ...subtitleRow,
+    ...emptyRow,
+    ...exportData
+  ];
+  
+  const ws = XLSX.utils.aoa_to_sheet(fullData);
+  
+  // Apply styling to title
+  if(!ws['A1']) ws['A1'] = {t:'s'};
+  if(!ws['A2']) ws['A2'] = {t:'s'};
+  
+  // Merge title cells
+  const mergeRange = {s: {r:0, c:0}, e: {r:0, c:exportData[0].length-1}};
+  if(!ws['!merges']) ws['!merges'] = [];
+  ws['!merges'].push(mergeRange);
+  
+  // Merge subtitle cells
+  const subtitleMerge = {s: {r:1, c:0}, e: {r:1, c:exportData[0].length-1}};
+  ws['!merges'].push(subtitleMerge);
+  
+  // Set column widths
+  const colWidths = [{wch: 15}]; // Date column
+  for(let i = 0; i < exportData[0].length - 1; i++) {
+    colWidths.push({wch: 20}); // Other columns
+  }
+  ws['!cols'] = colWidths;
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Routine Report');
+  XLSX.writeFile(wb, `islamic_routine_report_${monthName}_${year}.xlsx`);
+});
+
+// PDF export function
+exportPdfBtn.addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  const selected = new Date(selectedDateInput.value);
+  const monthName = selected.toLocaleString('default', { month: 'long' });
+  const year = selected.getFullYear();
+
+  // Add title centered at the top
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text('Islamic Routine Report', 105, 15, { align: 'center' });
+  
+  // Add subtitle
+  doc.setFontSize(12);
+  doc.setFont(undefined, 'normal');
+  doc.text(`${monthName} ${year}`, 105, 22, { align: 'center' });
+  
+  // Add a separator line
+  doc.line(15, 25, 195, 25);
+  
+  // Prepare data for the table
+  const exportData = getEntriesForExport();
+  const tableData = exportData.slice(1); // Remove header row for autoTable
+  
+  // Create table with autoTable
+  doc.autoTable({
+    head: [exportData[0]], // Header row
+    body: tableData, // Data rows
+    startY: 30,
+    theme: 'grid',
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+      valign: 'middle'
+    },
+    headStyles: {
+      fillColor: [66, 139, 202], // Blue header
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: {
+      fillColor: [240, 240, 240]
+    },
+    margin: { top: 30 }
+  });
+  
+  // Add footer with page numbers
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(10);
+    doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
+    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 290, { align: 'center' });
+  }
+  
+  doc.save(`islamic_routine_report_${monthName}_${year}.pdf`);
+});
+
+// --------------------------- Events ---------------------------
+todayBtn.addEventListener('click', ()=>{ selectedDateInput.value=todayKey(); updateAll(); });
+addCatBtn.addEventListener('click', addCategory);
+periodSelect.addEventListener('change', updateCharts);
+viewTypeSelect.addEventListener('change', updateAll);
+
+// --------------------------- Update All ---------------------------
+function updateAll(){ renderCategories(); renderEntries(); renderCategoriesList(); updateCharts(); }
+applyTheme(); scheduleReminders(); updateAll();
+
+</script>
+</body>
+</html>
