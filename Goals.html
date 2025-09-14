@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>My Islamic Goals</title>
+  <title>My Islamic Routine Report</title>
   <!-- Tailwind CDN for quick styling -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -19,27 +19,75 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <!-- jsPDF AutoTable for better PDF tables -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+    /* Custom styles for the fixed header */
+    #main-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      transition: transform 0.3s ease-in-out;
+      /* হালকা সাদা ব্যাকগ্রাউন্ড সাথে ব্লার ইফেক্ট */
+      background-color: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      /* হালকা বর্ডার */
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    /* ডার্ক মোডের জন্য হালকা ডার্ক ব্যাকগ্রাউন্ড */
+    .dark #main-header {
+      background-color: rgba(17, 24, 39, 0.8);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    body {
+      padding-top: 80px; /* Height of header + some padding */
+    }
+    
+    .header-hidden {
+      transform: translateY(-100%);
+    }
+    
+    .header-visible {
+      transform: translateY(0);
+    }
+
+    /* Manage Categories dropdown styles */
+    .dropdown-toggle::after {
+      content: "▼";
+      font-size: 0.7rem;
+      margin-left: 0.5rem;
+    }
+</style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-  <div class="min-h-screen max-w-6xl mx-auto p-4">
-    <header class="flex items-center justify-between mb-4">
-      <div>
-        <h1 class="text-2xl font-bold">My Islamic Routine Report</h1>
-        <div class="text-sm text-gray-500 dark:text-gray-400">Track • Improve • Stay Reminded</div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="themeToggle" class="px-3 py-2 rounded-xl border">Toggle Theme</button>
-        <button id="exportPdf" class="px-3 py-2 rounded-xl border">Export PDF</button>
-        <div class="relative group">
-          <button id="exportXlsx" class="px-3 py-2 rounded-xl border">Export Data</button>
-          <div class="absolute hidden group-hover:block right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10">
-            <button id="exportExcel" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Export as Excel</button>
-            <button id="exportSheets" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Export for Google Sheets</button>
+  <!-- Fixed Header -->
+  <header id="main-header" class="header-visible w-full border-b border-gray-200 dark:border-gray-700">
+    <div class="max-w-6xl mx-auto p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold">My Islamic Routine Report</h1>
+          <div class="text-sm text-gray-500 dark:text-gray-400">Track • Improve • Stay Reminded</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="px-3 py-2 rounded-xl border">Toggle Theme</button>
+          <button id="exportPdf" class="px-3 py-2 rounded-xl border">Export PDF</button>
+          <div class="relative group">
+            <button id="exportXlsx" class="px-3 py-2 rounded-xl border">Export Data</button>
+            <div class="absolute hidden group-hover:block right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10">
+              <button id="exportExcel" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Export as Excel</button>
+              <button id="exportSheets" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Export for Google Sheets</button>
+            </div>
           </div>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
+  <!-- Main Content -->
+  <div class="min-h-screen max-w-6xl mx-auto p-4">
     <main class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <!-- Left: Today controls and categories -->
       <section class="lg:col-span-2 space-y-4">
@@ -94,22 +142,27 @@
           </div>
         </div>
 
-        <div class="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow">
-          <div class="font-semibold mb-2">Manage Categories</div>
-          <div id="categoriesList" class="space-y-2 mb-3"></div>
-          <div class="p-2 border border-dashed rounded">
-            <div class="text-xs mb-2 text-gray-500 dark:text-gray-400">Add custom category</div>
-            <div class="grid grid-cols-2 gap-2">
-              <input id="newCatName" placeholder="Name (e.g., Hifz)" class="px-3 py-2 rounded dark:bg-gray-700" />
-              <select id="newCatUnit" class="px-3 py-2 rounded dark:bg-gray-700">
-                <option value="minutes">minutes</option>
-                <option value="hours">hours</option>
-                <option value="pages">pages</option>
-                <option value="count">count</option>
-                <option value="sessions">sessions</option>
-              </select>
-              <input id="newCatGoal" type="number" placeholder="Daily goal" class="px-3 py-2 rounded dark:bg-gray-700" />
-              <button id="addCatBtn" class="px-3 py-2 rounded bg-gray-900 text-white">Add Category</button>
+        <!-- Manage Categories as Dropdown -->
+        <div class="relative">
+          <button id="manageCategoriesToggle" class="w-full p-4 bg-white dark:bg-gray-800 rounded-2xl shadow text-left font-semibold flex justify-between items-center dropdown-toggle">
+            Manage Categories
+          </button>
+          <div id="manageCategoriesDropdown" class="absolute left-0 right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-2xl shadow hidden z-10">
+            <div id="categoriesList" class="space-y-2 mb-3 max-h-60 overflow-y-auto"></div>
+            <div class="p-2 border border-dashed rounded">
+              <div class="text-xs mb-2 text-gray-500 dark:text-gray-400">Add custom category</div>
+              <div class="grid grid-cols-2 gap-2">
+                <input id="newCatName" placeholder="Name (e.g., Hifz)" class="px-3 py-2 rounded dark:bg-gray-700" />
+                <select id="newCatUnit" class="px-3 py-2 rounded dark:bg-gray-700">
+                  <option value="minutes">minutes</option>
+                  <option value="hours">hours</option>
+                  <option value="pages">pages</option>
+                  <option value="count">count</option>
+                  <option value="sessions">sessions</option>
+                </select>
+                <input id="newCatGoal" type="number" placeholder="Daily goal" class="px-3 py-2 rounded dark:bg-gray-700" />
+                <button id="addCatBtn" class="px-3 py-2 rounded bg-gray-900 text-white">Add Category</button>
+              </div>
             </div>
           </div>
         </div>
@@ -129,6 +182,27 @@
   </div>
 
 <script>
+// --------------------------- Header Scroll Behavior ---------------------------
+let lastScrollTop = 0;
+const header = document.getElementById('main-header');
+const scrollThreshold = 60; // Minimum scroll distance needed to trigger hide/show
+
+window.addEventListener('scroll', function() {
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  
+  if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
+    // Scrolling down
+    header.classList.remove('header-visible');
+    header.classList.add('header-hidden');
+  } else if (scrollTop < lastScrollTop) {
+    // Scrolling up
+    header.classList.remove('header-hidden');
+    header.classList.add('header-visible');
+  }
+  
+  lastScrollTop = scrollTop;
+});
+
 // --------------------------- Data & Defaults ---------------------------
 const DEFAULT_CATEGORIES = [
   { id: 'prayer', name: 'Prayer', unit: 'count', goal: 5 },
@@ -170,8 +244,25 @@ const exportPdfBtn = document.getElementById('exportPdf');
 const exportExcelBtn = document.getElementById('exportExcel');
 const exportSheetsBtn = document.getElementById('exportSheets');
 const viewTypeSelect = document.getElementById('viewType');
+const manageCategoriesToggle = document.getElementById('manageCategoriesToggle');
+const manageCategoriesDropdown = document.getElementById('manageCategoriesDropdown');
 
 selectedDateInput.value = todayKey();
+
+// --------------------------- Dropdown Toggle ---------------------------
+manageCategoriesToggle.addEventListener('click', function() {
+  manageCategoriesDropdown.classList.toggle('hidden');
+});
+
+// Close the dropdown if the user clicks outside of it
+window.addEventListener('click', function(event) {
+  if (!event.target.matches('#manageCategoriesToggle') && 
+      !event.target.closest('#manageCategoriesDropdown')) {
+    if (!manageCategoriesDropdown.classList.contains('hidden')) {
+      manageCategoriesDropdown.classList.add('hidden');
+    }
+  }
+});
 
 // --------------------------- Rendering ---------------------------
 function renderCategories(){
@@ -375,113 +466,6 @@ function getEntriesForExport() {
   return exportData;
 }
 
-// Google Sheets export function with PDF-like design
-exportSheetsBtn.addEventListener('click', () => {
-  const selected = new Date(selectedDateInput.value);
-  const monthName = selected.toLocaleString('default', { month: 'long' });
-  const year = selected.getFullYear();
-  
-  // Create a more structured CSV with PDF-like formatting
-  let csvContent = "data:text/csv;charset=utf-8,";
-  
-  // Add title and header information
-  csvContent += "Islamic Routine Report\r\n";
-  csvContent += `${monthName} ${year}\r\n`;
-  csvContent += "\r\n"; // Empty line
-  
-  // Get the data
-  const exportData = getEntriesForExport();
-  
-  // Add column headers
-  csvContent += exportData[0].join(",") + "\r\n";
-  
-  // Add data rows
-  for (let i = 1; i < exportData.length; i++) {
-    csvContent += exportData[i].join(",") + "\r\n";
-  }
-  
-  // Add summary section
-  csvContent += "\r\n"; // Empty line
-  csvContent += "Summary\r\n";
-  
-  // Calculate totals for each category
-  categories.forEach(cat => {
-    const total = entries
-      .filter(e => e.categoryId === cat.id)
-      .reduce((sum, e) => sum + e.value, 0);
-    csvContent += `Total ${cat.name},${total} ${cat.unit}\r\n`;
-  });
-  
-  // Add footer
-  csvContent += "\r\n"; // Empty line
-  csvContent += `Report generated on,${new Date().toLocaleDateString()}\r\n`;
-  
-  // Create download link
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `islamic_routine_report_${monthName}_${year}.csv`);
-  document.body.appendChild(link);
-  
-  // Trigger download
-  link.click();
-  document.body.removeChild(link);
-  
-  // Show instructions
-  alert('CSV file downloaded with PDF-like formatting. You can import this into Google Sheets:\n\n1. Open Google Sheets\n2. Click File > Import\n3. Upload the CSV file\n4. Select "Replace spreadsheet" and click Import');
-});
-
-// Excel export function
-exportExcelBtn.addEventListener('click', () => {
-  const selected = new Date(selectedDateInput.value);
-  const monthName = selected.toLocaleString('default', { month: 'long' });
-  const year = selected.getFullYear();
-  
-  const exportData = getEntriesForExport();
-  
-  // Create workbook and worksheet
-  const wb = XLSX.utils.book_new();
-  
-  // Add title row
-  const titleRow = [['Islamic Routine Report']];
-  const subtitleRow = [[`${monthName} ${year}`]];
-  const emptyRow = [['']];
-  
-  // Combine title and data
-  const fullData = [
-    ...titleRow,
-    ...subtitleRow,
-    ...emptyRow,
-    ...exportData
-  ];
-  
-  const ws = XLSX.utils.aoa_to_sheet(fullData);
-  
-  // Apply styling to title
-  if(!ws['A1']) ws['A1'] = {t:'s'};
-  if(!ws['A2']) ws['A2'] = {t:'s'};
-  
-  // Merge title cells
-  const mergeRange = {s: {r:0, c:0}, e: {r:0, c:exportData[0].length-1}};
-  if(!ws['!merges']) ws['!merges'] = [];
-  ws['!merges'].push(mergeRange);
-  
-  // Merge subtitle cells
-  const subtitleMerge = {s: {r:1, c:0}, e: {r:1, c:exportData[0].length-1}};
-  ws['!merges'].push(subtitleMerge);
-  
-  // Set column widths
-  const colWidths = [{wch: 15}]; // Date column
-  for(let i = 0; i < exportData[0].length - 1; i++) {
-    colWidths.push({wch: 20}); // Other columns
-  }
-  ws['!cols'] = colWidths;
-  
-  XLSX.utils.book_append_sheet(wb, ws, 'Routine Report');
-  XLSX.writeFile(wb, `islamic_routine_report_${monthName}_${year}.xlsx`);
-});
-
-// PDF export function
 exportPdfBtn.addEventListener('click', () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -493,12 +477,12 @@ exportPdfBtn.addEventListener('click', () => {
   // Add title centered at the top
   doc.setFontSize(18);
   doc.setFont(undefined, 'bold');
-  doc.text('Islamic Routine Report', 105, 15, { align: 'center' });
+  doc.text('Monthly Report', 105, 15, { align: 'center' });
   
   // Add subtitle
   doc.setFontSize(12);
   doc.setFont(undefined, 'normal');
-  doc.text(`${monthName} ${year}`, 105, 22, { align: 'center' });
+  doc.text(`Islamic Routine Report: ${monthName} ${year}`, 105, 22, { align: 'center' });
   
   // Add a separator line
   doc.line(15, 25, 195, 25);
@@ -535,10 +519,91 @@ exportPdfBtn.addEventListener('click', () => {
     doc.setPage(i);
     doc.setFontSize(10);
     doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: 'center' });
-    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 290, { align: 'center' });
   }
   
   doc.save(`islamic_routine_report_${monthName}_${year}.pdf`);
+});
+
+exportExcelBtn.addEventListener('click', () => {
+  const selected = new Date(selectedDateInput.value);
+  const monthName = selected.toLocaleString('default', { month: 'long' });
+  const year = selected.getFullYear();
+  
+  const exportData = getEntriesForExport();
+  
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  
+  // Add title row
+  const titleRow = [['Monthly Report']];
+  const subtitleRow = [[`Islamic Routine Report: ${monthName} ${year}`]];
+  const emptyRow = [['']];
+  
+  // Combine title and data
+  const fullData = [
+    ...titleRow,
+    ...subtitleRow,
+    ...emptyRow,
+    ...exportData
+  ];
+  
+  const ws = XLSX.utils.aoa_to_sheet(fullData);
+  
+  // Apply styling to title
+  if(!ws['A1']) ws['A1'] = {t:'s'};
+  if(!ws['A2']) ws['A2'] = {t:'s'};
+  
+  // Merge title cells
+  const mergeRange = {s: {r:0, c:0}, e: {r:0, c:exportData[0].length-1}};
+  if(!ws['!merges']) ws['!merges'] = [];
+  ws['!merges'].push(mergeRange);
+  
+  // Merge subtitle cells
+  const subtitleMerge = {s: {r:1, c:0}, e: {r:1, c:exportData[0].length-1}};
+  ws['!merges'].push(subtitleMerge);
+  
+  // Set column widths
+  const colWidths = [{wch: 15}]; // Date column
+  for(let i = 0; i < exportData[0].length - 1; i++) {
+    colWidths.push({wch: 20}); // Other columns
+  }
+  ws['!cols'] = colWidths;
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Routine Report');
+  XLSX.writeFile(wb, `islamic_routine_report_${monthName}_${year}.xlsx`);
+});
+
+// Google Sheets export function
+exportSheetsBtn.addEventListener('click', () => {
+  const exportData = getEntriesForExport();
+  
+  // Convert to CSV format
+  let csvContent = "data:text/csv;charset=utf-8,";
+  
+  exportData.forEach(row => {
+    // Quote fields to handle commas in category names
+    const quotedRow = row.map(field => `"${field}"`).join(",");
+    csvContent += quotedRow + "\r\n";
+  });
+  
+  // Create download link
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  
+  const selected = new Date(selectedDateInput.value);
+  const monthName = selected.toLocaleString('default', { month: 'long' });
+  const year = selected.getFullYear();
+  
+  link.setAttribute("download", `islamic_routine_report_${monthName}_${year}.csv`);
+  document.body.appendChild(link);
+  
+  // Trigger download
+  link.click();
+  document.body.removeChild(link);
+  
+  // Show instructions
+  alert('CSV file downloaded. You can import this into Google Sheets:\n\n1. Open Google Sheets\n2. Click File > Import\n3. Upload the CSV file\n4. Select "Replace spreadsheet" and click Import');
 });
 
 // --------------------------- Events ---------------------------
